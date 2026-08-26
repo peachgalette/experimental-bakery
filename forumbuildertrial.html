@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园论坛体 · 楼层生成器（自动保存版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f4fa;
+            padding: 28px 24px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            max-width: 1440px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        /* ===== 编辑器面板 ===== */
+        .editor-panel {
+            background: white;
+            border-radius: 28px;
+            padding: 28px 30px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e6edf6;
+        }
+
+        .editor-panel h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0b253b;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .editor-panel h2 small {
+            font-size: 14px;
+            font-weight: 400;
+            color: #6a839e;
+        }
+
+        .save-status {
+            font-size: 13px;
+            color: #1d7a4f;
+            background: #e6f5ed;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .save-status.saving {
+            color: #b26f0e;
+            background: #fef3e0;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f405b;
+            margin-bottom: 4px;
+            letter-spacing: 0.2px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 14px;
+            border: 1px solid #d3dfeb;
+            font-size: 14px;
+            color: #1a3147;
+            background: #fafcff;
+            transition: 0.15s;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #1f6b9e;
+            box-shadow: 0 0 0 4px rgba(31, 107, 158, 0.10);
+            background: white;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.6;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-weight: 500;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: 0.12s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #1a4d73;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0e3a5a;
+            transform: scale(0.97);
+        }
+
+        .btn-success {
+            background: #1d7a4f;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #14633f;
+            transform: scale(0.97);
+        }
+
+        .btn-danger {
+            background: #b22234;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #8f1b2a;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #cbdae7;
+            color: #1f3a51;
+        }
+        .btn-outline:hover {
+            background: #f1f7fd;
+            border-color: #8dabca;
+        }
+
+        .btn-outline-danger {
+            background: transparent;
+            border: 1px solid #e6b3b3;
+            color: #b22234;
+        }
+        .btn-outline-danger:hover {
+            background: #fee9e9;
+            border-color: #b22234;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .floor-list {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid #e2ecf5;
+            border-radius: 14px;
+            padding: 8px 12px;
+            background: #fafdff;
+            margin-top: 4px;
+        }
+
+        .floor-list .floor-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            border-bottom: 1px solid #eff4f9;
+            font-size: 13px;
+        }
+
+        .floor-list .floor-item:last-child {
+            border-bottom: none;
+        }
+
+        .floor-list .floor-item .info {
+            color: #1f405b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+
+        .floor-list .floor-item .info .nick {
+            font-weight: 600;
+            color: #0b2a45;
+        }
+
+        .floor-list .floor-item .del-btn {
+            background: none;
+            border: none;
+            color: #b22234;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 6px;
+        }
+
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .text-muted {
+            color: #6f8aa3;
+            font-size: 13px;
+        }
+        .flex {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ===== 富文本工具栏 ===== */
+        .editor-toolbar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 8px 12px;
+            background: #f5f9ff;
+            border-radius: 14px 14px 0 0;
+            border: 1px solid #d3dfeb;
+            border-bottom: none;
+        }
+
+        .editor-toolbar .tool-btn {
+            background: white;
+            border: 1px solid #d3dfeb;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #1f405b;
+        }
+
+        .editor-toolbar .tool-btn:hover {
+            background: #e6f0fa;
+            border-color: #8dabca;
+        }
+
+        .editor-toolbar .tool-btn.active {
+            background: #1a4d73;
+            color: white;
+            border-color: #1a4d73;
+        }
+
+        .editor-toolbar .color-picker-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: white;
+            border: 1px solid #d3dfeb;
+            border-radius: 8px;
+            padding: 2px 8px 2px 10px;
+        }
+
+        .editor-toolbar .color-picker-wrapper input[type="color"] {
+            width: 28px;
+            height: 28px;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .editor-toolbar .color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .editor-toolbar .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
+            border: 1px solid #d3dfeb;
+            border-radius: 6px;
+        }
+
+        .content-editor {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px 16px;
+            border-radius: 0 0 14px 14px;
+            border: 1px solid #d3dfeb;
+            border-top: none;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #1a3147;
+            background: #fafcff;
+            outline: none;
+            transition: 0.15s;
+            overflow-y: auto;
+        }
+
+        .content-editor:focus {
+            border-color: #1f6b9e;
+            box-shadow: 0 0 0 4px rgba(31, 107, 158, 0.10);
+            background: white;
+        }
+
+        .content-editor:empty::before {
+            content: "输入楼层内容……";
+            color: #889eb3;
+        }
+
+        /* ===== 预览面板 ===== */
+        .preview-panel {
+            background: white;
+            border-radius: 28px;
+            padding: 28px 30px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e6edf6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-panel h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0b253b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .preview-panel h2 .badge {
+            background: #e6f0fa;
+            color: #1a4d73;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 2px 14px;
+            border-radius: 40px;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .forum-post {
+            background: #f9fcff;
+            border-radius: 20px;
+            padding: 20px 24px 24px;
+            border: 1px solid #e2ecf5;
+            max-height: 560px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .forum-post .post-header {
+            border-bottom: 2px solid #e2ecf5;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+        }
+
+        .forum-post .post-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0b253b;
+            margin-bottom: 4px;
+            cursor: text;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: 0.15s;
+        }
+
+        .forum-post .post-title:hover {
+            background: #f0f6fe;
+        }
+
+        .forum-post .post-title:focus {
+            background: white;
+            box-shadow: 0 0 0 3px rgba(31, 107, 158, 0.20);
+            outline: none;
+        }
+
+        .forum-post .post-meta {
+            font-size: 13px;
+            color: #57748f;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .forum-post .post-meta .editable-meta {
+            cursor: text;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: 0.15s;
+        }
+
+        .forum-post .post-meta .editable-meta:hover {
+            background: #f0f6fe;
+        }
+
+        .forum-post .post-meta .editable-meta:focus {
+            background: white;
+            box-shadow: 0 0 0 2px rgba(31, 107, 158, 0.15);
+            outline: none;
+        }
+
+        .forum-post .floor {
+            padding: 12px 0;
+            border-bottom: 1px solid #eef4f9;
+            transition: 0.1s;
+        }
+
+        .forum-post .floor:last-child {
+            border-bottom: none;
+        }
+
+        .forum-post .floor:hover {
+            background: #f8fbff;
+            margin: 0 -8px;
+            padding-left: 8px;
+            padding-right: 8px;
+            border-radius: 8px;
+        }
+
+        .forum-post .floor .floor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #3d5e7a;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .forum-post .floor .floor-header .nickname {
+            font-weight: 600;
+            color: #0b2a45;
+            cursor: text;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: 0.15s;
+        }
+
+        .forum-post .floor .floor-header .nickname:hover {
+            background: #f0f6fe;
+        }
+
+        .forum-post .floor .floor-header .nickname:focus {
+            background: white;
+            box-shadow: 0 0 0 2px rgba(31, 107, 158, 0.15);
+            outline: none;
+        }
+
+        .forum-post .floor .floor-header .floor-number {
+            color: #6f8aa3;
+            font-size: 12px;
+        }
+
+        .forum-post .floor .content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #1a3147;
+            word-break: break-word;
+            cursor: text;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: 0.15s;
+            min-height: 24px;
+        }
+
+        .forum-post .floor .content:hover {
+            background: #f0f6fe;
+        }
+
+        .forum-post .floor .content:focus {
+            background: white;
+            box-shadow: 0 0 0 3px rgba(31, 107, 158, 0.20);
+            outline: none;
+        }
+
+        .forum-post .floor .content .quote {
+            background: #f1f7fd;
+            border-left: 4px solid #8dabca;
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin: 4px 0 8px 0;
+            font-style: italic;
+            color: #2b4b67;
+            font-size: 13px;
+        }
+
+        .forum-post .floor .content .quote .q-author {
+            font-weight: 600;
+            color: #1a4d73;
+        }
+
+        .forum-post::-webkit-scrollbar {
+            width: 5px;
+        }
+        .forum-post::-webkit-scrollbar-track {
+            background: #eef4f9;
+            border-radius: 12px;
+        }
+        .forum-post::-webkit-scrollbar-thumb {
+            background: #cbdae7;
+            border-radius: 12px;
+        }
+
+        /* ===== 编辑提示 ===== */
+        .edit-hint {
+            font-size: 12px;
+            color: #889eb3;
+            text-align: center;
+            padding: 6px 0 0 0;
+            border-top: 1px dashed #e2ecf5;
+            margin-top: 12px;
+        }
+
+        .edit-hint span {
+            background: #f5f9ff;
+            padding: 2px 12px;
+            border-radius: 40px;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 1000px) {
+            .app-wrapper {
+                grid-template-columns: 1fr;
+                gap: 28px;
+            }
+            .form-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+            .editor-panel,
+            .preview-panel {
+                padding: 18px 16px;
+            }
+            .form-row,
+            .form-row-2 {
+                grid-template-columns: 1fr;
+            }
+            .btn-group .btn {
+                flex: 1;
+                justify-content: center;
+            }
+            .editor-toolbar .tool-btn {
+                font-size: 12px;
+                padding: 3px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <!-- ========== 左：编辑器 ========== -->
+    <div class="editor-panel">
+        <h2>
+            🧩 楼层生成器
+            <small>— 自动保存版</small>
+            <span class="save-status" id="saveStatus">💾 已保存</span>
+        </h2>
+
+        <!-- 帖子基本信息 -->
+        <div class="form-group">
+            <label>📌 帖子标题</label>
+            <input type="text" id="postTitle" value="救救孩子吧……这选课系统是认真的吗？？？">
+        </div>
+
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>👤 发帖人</label>
+                <input type="text" id="postAuthor" value="小鲸不是鱼">
+            </div>
+            <div class="form-group">
+                <label>🕒 发帖时间</label>
+                <input type="text" id="postTime" value="2026-08-25 09:47">
+            </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e6edf6; margin: 18px 0;">
+
+        <!-- 楼层生成器 -->
+        <div style="font-weight: 600; color: #0b253b; font-size: 15px; margin-bottom: 12px;">
+            📝 添加新楼层
+        </div>
+
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>👤 用户名</label>
+                <input type="text" id="floorUser" placeholder="输入或选择已有用户" list="userList" value="熬夜秃头选手">
+                <datalist id="userList"></datalist>
+            </div>
+            <div class="form-group">
+                <label>🏷️ 身份标签 (可选)</label>
+                <input type="text" id="floorTag" placeholder="例如：沙发 / 楼主" value="沙发">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>💬 楼层内容（支持富文本）</label>
+            <div class="editor-toolbar">
+                <button class="tool-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+                <button class="tool-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+                <button class="tool-btn" data-cmd="underline" title="下划线"><u>U</u></button>
+                <button class="tool-btn" data-cmd="strikeThrough" title="删除线"><s>S</s></button>
+                <div class="color-picker-wrapper">
+                    <span style="font-size:13px;">🎨</span>
+                    <input type="color" id="textColor" value="#1a3147">
+                </div>
+                <button class="tool-btn" data-cmd="removeFormat" title="清除格式">✕ 清除</button>
+            </div>
+            <div class="content-editor" id="contentEditor" contenteditable="true"></div>
+        </div>
+
+        <div class="form-group">
+            <label>🔗 回复某层楼 (可选)</label>
+            <div class="flex">
+                <input type="number" id="replyTo" placeholder="输入楼层编号，如 1" style="width: 120px; padding: 8px 14px; border-radius: 60px; border: 1px solid #d3dfeb; font-size: 14px; outline: none;">
+                <span class="text-muted">回复 # 号楼层</span>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-success" id="addFloorBtn">➕ 添加楼层</button>
+            <button class="btn btn-outline" id="addOpFloorBtn">👑 添加楼主楼层</button>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e6edf6; margin: 18px 0;">
+
+        <!-- 已生成的楼层列表 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-weight: 600; color: #0b253b; font-size: 15px;">📋 已生成楼层</span>
+            <span class="text-muted" id="floorCount">0 层</span>
+        </div>
+        <div class="floor-list" id="floorListContainer">
+            <div class="text-muted" style="padding: 12px; text-align: center;">暂无楼层，请添加</div>
+        </div>
+
+        <div class="btn-group" style="margin-top: 12px;">
+            <button class="btn btn-outline-danger" id="clearFloorsBtn">🗑️ 清空所有楼层</button>
+            <button class="btn btn-outline" id="manualSaveBtn">💾 手动保存</button>
+            <button class="btn btn-outline" id="loadBtn">📂 加载保存</button>
+        </div>
+    </div>
+
+    <!-- ========== 右：预览 ========== -->
+    <div class="preview-panel">
+        <h2>
+            👀 帖子预览
+            <span class="badge">双击任意文字编辑</span>
+        </h2>
+
+        <div class="preview-actions">
+            <button class="btn btn-primary" id="copyTextBtn">📋 复制带格式文本</button>
+            <button class="btn btn-primary" id="generateImageBtn">🖼️ 生成图片</button>
+            <button class="btn btn-outline" id="syncFromPreviewBtn">🔄 同步预览修改</button>
+        </div>
+
+        <div class="forum-post" id="previewContainer">
+            <!-- 由 JavaScript 动态渲染 -->
+        </div>
+
+        <div class="edit-hint">
+            <span>💡 双击任意文字（标题、用户名、楼层内容）即可直接编辑 · 修改自动保存</span>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js">
+</script>
+<script>
+    (function() {
+        // ========== 数据 ==========
+        let floors = [];
+        let nextId = 1;
+        let userSet = new Set();
+        let saveTimer = null;
+        const SAVE_KEY = 'forum_generator_data';
+
+        // DOM 元素
+        const titleInput = document.getElementById('postTitle');
+        const authorInput = document.getElementById('postAuthor');
+        const timeInput = document.getElementById('postTime');
+        const floorUser = document.getElementById('floorUser');
+        const floorTag = document.getElementById('floorTag');
+        const contentEditor = document.getElementById('contentEditor');
+        const replyTo = document.getElementById('replyTo');
+        const floorListContainer = document.getElementById('floorListContainer');
+        const floorCount = document.getElementById('floorCount');
+        const previewContainer = document.getElementById('previewContainer');
+        const userList = document.getElementById('userList');
+        const saveStatus = document.getElementById('saveStatus');
+
+        // ========== 保存/加载 ==========
+        function saveData() {
+            const data = {
+                floors: floors,
+                nextId: nextId,
+                userSet: Array.from(userSet),
+                title: titleInput.value,
+                author: authorInput.value,
+                time: timeInput.value
+            };
+            try {
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+                saveStatus.textContent = '💾 已保存';
+                saveStatus.className = 'save-status';
+            } catch (e) {
+                console.warn('保存失败:', e);
+                saveStatus.textContent = '⚠️ 保存失败';
+                saveStatus.className = 'save-status saving';
+            }
+        }
+
+        function loadData() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                if (!data.floors || !Array.isArray(data.floors)) return false;
+
+                floors = data.floors;
+                nextId = data.nextId || 1;
+                if (data.userSet) {
+                    userSet = new Set(data.userSet);
+                }
+                titleInput.value = data.title || '（无标题）';
+                authorInput.value = data.author || '匿名用户';
+                timeInput.value = data.time || '刚刚';
+                getUserList();
+                renderAll();
+                saveStatus.textContent = '💾 已加载保存';
+                saveStatus.className = 'save-status';
+                return true;
+            } catch (e) {
+                console.warn('加载保存失败:', e);
+                return false;
+            }
+        }
+
+        function autoSave() {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                saveData();
+            }, 500);
+        }
+
+        // ========== 富文本工具栏 ==========
+        document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const cmd = this.dataset.cmd;
+                if (cmd === 'removeFormat') {
+                    document.execCommand('removeFormat', false, null);
+                    return;
+                }
+                if (cmd === 'strikeThrough') {
+                    document.execCommand('strikeThrough', false, null);
+                    return;
+                }
+                document.execCommand(cmd, false, null);
+                contentEditor.focus();
+            });
+        });
+
+        document.getElementById('textColor').addEventListener('input', function() {
+            document.execCommand('foreColor', false, this.value);
+            contentEditor.focus();
+        });
+
+        contentEditor.addEventListener('focus', function() {
+            if (this.textContent.trim() === '') {
+                this.innerHTML = '';
+            }
+        });
+
+        contentEditor.addEventListener('blur', function() {
+            if (this.textContent.trim() === '') {
+                this.innerHTML = '';
+            }
+        });
+
+        // ========== 核心函数 ==========
+        function getNextNumber() {
+            if (floors.length === 0) return 1;
+            const max = Math.max(...floors.map(f => f.number));
+            return max + 1;
+        }
+
+        function getUserList() {
+            userList.innerHTML = '';
+            const sorted = Array.from(userSet).sort();
+            sorted.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u;
+                userList.appendChild(opt);
+            });
+        }
+
+        function addFloor(user, tag, contentHtml, replyToNum, isOp = false) {
+            const number = getNextNumber();
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = contentHtml;
+            const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+            const floor = {
+                id: nextId++,
+                number: number,
+                user: user.trim() || '匿名用户',
+                tag: tag.trim() || '',
+                contentHtml: contentHtml || '（内容为空）',
+                contentPlain: plainText.trim() || '（内容为空）',
+                replyTo: replyToNum ? parseInt(replyToNum) : null,
+                isOp: isOp
+            };
+
+            if (floors.some(f => f.number === floor.number)) {
+                floor.number = getNextNumber();
+            }
+
+            floors.push(floor);
+            if (user.trim()) userSet.add(user.trim());
+            getUserList();
+            renderAll();
+            autoSave();
+            return floor;
+        }
+
+        function addOpFloor() {
+            const user = authorInput.value.trim() || '楼主';
+            const tag = '楼主';
+            const content = contentEditor.innerHTML || '（楼主发言）';
+            const reply = replyTo.value ? parseInt(replyTo.value) : null;
+            const number = getNextNumber();
+            const floor = {
+                id: nextId++,
+                number: number,
+                user: user,
+                tag: '楼主',
+                contentHtml: content,
+                contentPlain: contentEditor.textContent || '（楼主发言）',
+                replyTo: reply,
+                isOp: true
+            };
+            if (floors.some(f => f.number === floor.number)) {
+                floor.number = getNextNumber();
+            }
+            floors.push(floor);
+            if (user.trim()) userSet.add(user.trim());
+            getUserList();
+            renderAll();
+            autoSave();
+            return floor;
+        }
+
+        function deleteFloor(id) {
+            floors = floors.filter(f => f.id !== id);
+            renderAll();
+            autoSave();
+        }
+
+        function clearFloors() {
+            floors = [];
+            renderAll();
+            autoSave();
+        }
+
+        // ========== 从预览同步数据 ==========
+        function syncFromPreview() {
+            const postEl = previewContainer;
+            const titleEl = postEl.querySelector('.post-title');
+            if (titleEl) {
+                titleInput.value = titleEl.textContent.trim();
+            }
+            const metaEls = postEl.querySelectorAll('.post-meta span');
+            if (metaEls.length >= 2) {
+                const authorMatch = metaEls[0]?.textContent?.match(/发帖人：(.+)/);
+                if (authorMatch) authorInput.value = authorMatch[1].trim();
+                const timeMatch = metaEls[1]?.textContent?.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})/);
+                if (timeMatch) timeInput.value = timeMatch[1];
+            }
+
+            const floorEls = postEl.querySelectorAll('.floor');
+            const newFloors = [];
+            let maxNum = 0;
+            floorEls.forEach((el, index) => {
+                const numberEl = el.querySelector('.floor-number');
+                const number = numberEl ? parseInt(numberEl.textContent.replace('第 ', '').replace(' 层', '')) :
+                    index + 1;
+                if (number > maxNum) maxNum = number;
+
+                const headerEl = el.querySelector('.nickname');
+                let user = '匿名用户';
+                let tag = '';
+                let isOp = false;
+                if (headerEl) {
+                    const text = headerEl.textContent.trim();
+                    const parts = text.split(' ');
+                    if (parts.length >= 2) {
+                        user = parts[1] || '匿名用户';
+                        if (parts[2] && parts[2].startsWith('[')) {
+                            tag = parts[2].replace('[', '').replace(']', '');
+                        }
+                        if (text.includes('👑')) isOp = true;
+                    }
+                }
+
+                const contentEl = el.querySelector('.content');
+                let contentHtml = contentEl ? contentEl.innerHTML : '（内容为空）';
+
+                let replyToNum = null;
+                const quoteBlock = el.querySelector('.quote .q-author');
+                if (quoteBlock) {
+                    const match = quoteBlock.textContent.match(/#(\d+)/);
+                    if (match) replyToNum = parseInt(match[1]);
+                }
+
+                if (!newFloors.some(f => f.number === number)) {
+                    newFloors.push({
+                        id: nextId++,
+                        number: number,
+                        user: user,
+                        tag: tag,
+                        contentHtml: contentHtml,
+                        contentPlain: contentEl ? contentEl.textContent || '' : '',
+                        replyTo: replyToNum,
+                        isOp: isOp
+                    });
+                    if (user.trim()) userSet.add(user.trim());
+                }
+            });
+
+            if (newFloors.length > 0) {
+                floors = newFloors;
+                getUserList();
+                renderAll();
+                autoSave();
+                alert('✅ 已从预览同步所有楼层数据！');
+            } else {
+                alert('⚠️ 未检测到楼层数据，请确保预览中有楼层内容。');
+            }
+        }
+
+        // ========== 渲染 ==========
+        function renderAll() {
+            renderFloorList();
+            renderPreview();
+        }
+
+        function renderFloorList() {
+            if (floors.length === 0) {
+                floorListContainer.innerHTML =
+                    `<div class="text-muted" style="padding: 12px; text-align: center;">暂无楼层，请添加</div>`;
+                floorCount.textContent = '0 层';
+                return;
+            }
+
+            let html = '';
+            const sorted = [...floors].sort((a, b) => a.number - b.number);
+            sorted.forEach(f => {
+                const tagDisplay = f.tag ? ` [${f.tag}]` : '';
+                const replyDisplay = f.replyTo ? ` ↳ 回复 #${f.replyTo}` : '';
+                const preview = f.contentPlain.substring(0, 30) + (f.contentPlain.length > 30 ? '…' : '');
+                html += `
+                            <div class="floor-item">
+                                <span class="info">
+                                    <span class="nick">#${f.number} ${f.user}</span>${tagDisplay}${replyDisplay}
+                                    <span class="text-muted" style="font-size:12px; margin-left:6px;">${preview}</span>
+                                </span>
+                                <button class="del-btn" data-id="${f.id}" title="删除">✕</button>
+                            </div>
+                        `;
+            });
+
+            floorListContainer.innerHTML = html;
+            floorCount.textContent = `${floors.length} 层`;
+
+            document.querySelectorAll('.del-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const id = parseInt(this.dataset.id);
+                    deleteFloor(id);
+                });
+            });
+        }
+
+        function renderPreview() {
+            const title = titleInput.value.trim() || '（无标题）';
+            const author = authorInput.value.trim() || '匿名用户';
+            const time = timeInput.value.trim() || '刚刚';
+
+            let html = '';
+
+            html += `
+                        <div class="post-header">
+                            <div class="post-title" contenteditable="true" data-edit-type="title">${escapeHtml(title)}</div>
+                            <div class="post-meta">
+                                <span><span class="editable-meta" contenteditable="true" data-edit-type="author">👤 发帖人：${escapeHtml(author)}</span></span>
+                                <span><span class="editable-meta" contenteditable="true" data-edit-type="time">🕒 ${escapeHtml(time)}</span></span>
+                                <span>💬 ${floors.length} 条回复</span>
+                            </div>
+                        </div>
+                    `;
+
+            if (floors.length === 0) {
+                html += `<div class="text-muted" style="padding: 20px 0; text-align:center;">暂无楼层，请在左侧生成器中添加。</div>`;
+                previewContainer.innerHTML = html;
+                attachEditEvents();
+                return;
+            }
+
+            const sorted = [...floors].sort((a, b) => a.number - b.number);
+
+            sorted.forEach(f => {
+                let contentHtml = f.contentHtml || f.contentPlain || '（内容为空）';
+
+                let quoteHtml = '';
+                if (f.replyTo) {
+                    const replied = sorted.find(s => s.number === f.replyTo);
+                    if (replied) {
+                        const repliedPreview = replied.contentPlain.substring(0, 80) + (replied.contentPlain.length > 80 ?
+                            '…' : '');
+                        quoteHtml = `
+                                    <div class="quote">
+                                        <span class="q-author">#${replied.number} ${escapeHtml(replied.user)}</span> 说：<br>
+                                        ${escapeHtml(repliedPreview)}
+                                    </div>
+                                `;
+                    } else {
+                        quoteHtml =
+                            `<div class="quote" style="color:#b22234;">⚠️ 回复的楼层 #${f.replyTo} 不存在</div>`;
+                    }
+                }
+
+                const tagDisplay = f.tag ? ` [${escapeHtml(f.tag)}]` : '';
+                const opBadge = f.isOp ? ' 👑' : '';
+
+                html += `
+                            <div class="floor" data-floor-id="${f.id}">
+                                <div class="floor-header">
+                                    <span class="nickname" contenteditable="true" data-edit-type="username" data-floor-id="${f.id}">#${f.number} ${escapeHtml(f.user)}${tagDisplay}${opBadge}</span>
+                                    <span class="floor-number">第 ${f.number} 层</span>
+                                </div>
+                                <div class="content" contenteditable="true" data-edit-type="content" data-floor-id="${f.id}">
+                                    ${quoteHtml}
+                                    ${contentHtml}
+                                </div>
+                            </div>
+                        `;
+            });
+
+            previewContainer.innerHTML = html;
+            attachEditEvents();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== 编辑事件绑定 ==========
+        function attachEditEvents() {
+            // 标题编辑
+            const titleEl = previewContainer.querySelector('.post-title');
+            if (titleEl) {
+                titleEl.addEventListener('input', function() {
+                    titleInput.value = this.textContent.trim();
+                    autoSave();
+                });
+                titleEl.addEventListener('blur', function() {
+                    if (!this.textContent.trim()) {
+                        this.textContent = '（无标题）';
+                    }
+                });
+            }
+
+            // 作者编辑
+            const authorEl = previewContainer.querySelector('[data-edit-type="author"]');
+            if (authorEl) {
+                authorEl.addEventListener('input', function() {
+                    const text = this.textContent.replace('👤 发帖人：', '').trim();
+                    authorInput.value = text;
+                    autoSave();
+                });
+                authorEl.addEventListener('blur', function() {
+                    if (!this.textContent.replace('👤 发帖人：', '').trim()) {
+                        this.textContent = '👤 发帖人：匿名用户';
+                    }
+                });
+            }
+
+            // 时间编辑
+            const timeEl = previewContainer.querySelector('[data-edit-type="time"]');
+            if (timeEl) {
+                timeEl.addEventListener('input', function() {
+                    const text = this.textContent.replace('🕒', '').trim();
+                    timeInput.value = text;
+                    autoSave();
+                });
+                timeEl.addEventListener('blur', function() {
+                    if (!this.textContent.replace('🕒', '').trim()) {
+                        this.textContent = '🕒 刚刚';
+                    }
+                });
+            }
+
+            // 用户名编辑
+            previewContainer.querySelectorAll('[data-edit-type="username"]').forEach(el => {
+                el.addEventListener('input', function() {
+                    const floorId = parseInt(this.dataset.floorId);
+                    const floor = floors.find(f => f.id === floorId);
+                    if (!floor) return;
+                    const text = this.textContent.trim();
+                    const parts = text.split(' ');
+                    let user = parts[1] || '匿名用户';
+                    let tag = '';
+                    let isOp = false;
+                    if (parts[2] && parts[2].startsWith('[')) {
+                        tag = parts[2].replace('[', '').replace(']', '');
+                    }
+                    if (text.includes('👑')) isOp = true;
+                    floor.user = user;
+                    floor.tag = tag;
+                    floor.isOp = isOp;
+                    if (user.trim()) userSet.add(user.trim());
+                    getUserList();
+                    renderFloorList();
+                    autoSave();
+                });
+            });
+
+            // 楼层内容编辑
+            previewContainer.querySelectorAll('[data-edit-type="content"]').forEach(el => {
+                el.addEventListener('input', function() {
+                    const floorId = parseInt(this.dataset.floorId);
+                    const floor = floors.find(f => f.id === floorId);
+                    if (!floor) return;
+                    floor.contentHtml = this.innerHTML;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.innerHTML;
+                    const quoteClone = tempDiv.querySelector('.quote');
+                    if (quoteClone) {
+                        floor.contentPlain = tempDiv.textContent || tempDiv.innerText || '';
+                    } else {
+                        floor.contentPlain = tempDiv.textContent || tempDiv.innerText || '';
+                    }
+                    renderFloorList();
+                    autoSave();
+                });
+            });
+        }
+
+        // ========== 生成纯文本 ==========
+        function generateFormattedText() {
+            const title = titleInput.value.trim() || '（无标题）';
+            const author = authorInput.value.trim() || '匿名用户';
+            const time = timeInput.value.trim() || '刚刚';
+
+            let lines = [];
+            lines.push(`【${title}】`);
+            lines.push(`发帖人：${author} ｜ 时间：${time}`);
+            lines.push('');
+
+            if (floors.length === 0) {
+                lines.push('（暂无回复）');
+            } else {
+                const sorted = [...floors].sort((a, b) => a.number - b.number);
+                sorted.forEach(f => {
+                    let prefix = `#${f.number} ${f.user}`;
+                    if (f.tag) prefix += ` [${f.tag}]`;
+                    if (f.isOp) prefix += ' 👑';
+                    lines.push(prefix);
+
+                    if (f.replyTo) {
+                        const replied = sorted.find(s => s.number === f.replyTo);
+                        if (replied) {
+                            const replyPreview = replied.contentPlain.substring(0, 60) + (replied.contentPlain
+                            .length > 60 ? '…' : '');
+                            lines.push(`  ↳ 回复 #${f.replyTo} ${replied.user}：${replyPreview}`);
+                        } else {
+                            lines.push(`  ↳ 回复 #${f.replyTo}（楼层不存在）`);
+                        }
+                    }
+
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = f.contentHtml || f.contentPlain || '';
+                    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                    const contentLines = plainText.split('\n');
+                    contentLines.forEach(line => {
+                        if (line.trim()) {
+                            lines.push(`  ${line.trim()}`);
+                        } else {
+                            lines.push(`  `);
+                        }
+                    });
+                    lines.push('');
+                });
+            }
+
+            return lines.join('\n');
+        }
+
+        // ========== 事件绑定 ==========
+
+        // 添加楼层
+        document.getElementById('addFloorBtn').addEventListener('click', function() {
+            const user = floorUser.value.trim() || '匿名用户';
+            const tag = floorTag.value.trim() || '';
+            const content = contentEditor.innerHTML || '（内容为空）';
+            const reply = replyTo.value ? parseInt(replyTo.value) : null;
+            addFloor(user, tag, content, reply, false);
+            contentEditor.innerHTML = '';
+            replyTo.value = '';
+        });
+
+        // 添加楼主楼层
+        document.getElementById('addOpFloorBtn').addEventListener('click', function() {
+            const content = contentEditor.innerHTML || '（楼主发言）';
+            const reply = replyTo.value ? parseInt(replyTo.value) : null;
+            addOpFloor();
+            contentEditor.innerHTML = '';
+            replyTo.value = '';
+        });
+
+        // 清空
+        document.getElementById('clearFloorsBtn').addEventListener('click', function() {
+            if (floors.length === 0) return;
+            if (confirm('确定要清空所有楼层吗？')) {
+                clearFloors();
+            }
+        });
+
+        // 手动保存
+        document.getElementById('manualSaveBtn').addEventListener('click', function() {
+            saveData();
+            alert('✅ 已手动保存！');
+        });
+
+        // 加载保存
+        document.getElementById('loadBtn').addEventListener('click', function() {
+            if (loadData()) {
+                alert('✅ 已加载保存的数据！');
+            } else {
+                alert('⚠️ 没有找到保存的数据，或数据已损坏。');
+            }
+        });
+
+        // 同步预览修改
+        document.getElementById('syncFromPreviewBtn').addEventListener('click', syncFromPreview);
+
+        // 标题/作者/时间 输入同步
+        titleInput.addEventListener('input', function() { renderPreview();
+            autoSave(); });
+        authorInput.addEventListener('input', function() { renderPreview();
+            autoSave(); });
+        timeInput.addEventListener('input', function() { renderPreview();
+            autoSave(); });
+
+        // 复制文本
+        document.getElementById('copyTextBtn').addEventListener('click', function() {
+            const text = generateFormattedText();
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 带格式文本已复制到剪贴板！');
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ 已复制！');
+            });
+        });
+
+        // 生成图片
+        document.getElementById('generateImageBtn').addEventListener('click', function() {
+            const target = previewContainer;
+            const originalOverflow = target.style.overflow;
+            const originalMaxHeight = target.style.maxHeight;
+            target.style.overflow = 'visible';
+            target.style.maxHeight = 'none';
+
+            html2canvas(target, {
+                scale: 2,
+                backgroundColor: '#f9fcff',
+                useCORS: true,
+                logging: false,
+                width: target.scrollWidth,
+                height: target.scrollHeight,
+            }).then(canvas => {
+                target.style.overflow = originalOverflow;
+                target.style.maxHeight = originalMaxHeight || '560px';
+                const link = document.createElement('a');
+                link.download = `论坛帖子_${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                alert('生成图片失败，请重试或使用截图工具。\n' + err.message);
+                target.style.overflow = originalOverflow;
+                target.style.maxHeight = originalMaxHeight || '560px';
+            });
+        });
+
+        // 快捷添加 (Ctrl+Enter)
+        contentEditor.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                document.getElementById('addFloorBtn').click();
+            }
+        });
+
+        // ========== 初始化 ==========
+        function init() {
+            // 先尝试加载保存的数据
+            const hasSaved = loadData();
+
+            if (!hasSaved) {
+                // 没有保存数据，使用示例
+                const demoFloors = [
+                    { user: '小鲸不是鱼', tag: '楼主', content: '家人们谁懂啊！！！大早上爬起来抢课，教务系统直接给我表演一个"404 Not Found"……刷新了八百遍，好不容易进去了，结果——<br>"当前访问人数过多，请稍后再试。"<br>然后我像个傻子一样等了十分钟，再进去，<b>Python数据分析</b> 从"可选(45/45)" 秒变 "已满(45/45)"……我连选课按钮都没摸到啊喂！！！<br>现在页面卡在课表冲突检测那里转圈圈，已经转了快二十分钟了，我怀疑它是在用我的焦虑发电。有没有人和我一样惨的？？？让我知道不是一个人在战斗😭', isOp: true },
+                    { user: '熬夜秃头选手', tag: '沙发', content: '抢到了沙发，但我没抢到课🙃同款悲剧，<b>机器学习基础</b> 我盯了三天，开抢一秒就没了，我甚至怀疑那门课只有1个名额。' },
+                    { user: '课表清洁工', tag: '板凳', content: '楼主你那个"冲突检测"算好的了……我直接整个页面白屏，然后弹出来一个框：<span style="color:#b22234;">"系统维护中，预计恢复时间 23:59。"</span>现在才早上十点，它跟我说23:59？？教务处是不是把时钟焊反了？？？', replyTo: 1 },
+                    { user: '选课难民', tag: '地板', content: '笑死，你们还能看到课表，我连登录都登不进去。验证码刷出来一张"请选择所有包含红绿灯的图片"，我选了十分钟，它说我选错了……我现在看到红绿灯都想哭。' },
+                    { user: '通识课混子', tag: '五楼', content: '楼上+1，验证码反人类设计实锤。不过说到课，<span style="color:#1d7a4f;"><b>电影与心理学</b></span> 还有位置诶，我刚捡漏选上了，楼主你要不要去看看？' },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '！！！火速去看！！！谢谢五楼家人！！！但……我点进去之后，它又给我卡住了……<span style="color:#b22234;">"正在加载选课数据，请勿关闭页面。"</span>我发誓我没关，但我的浏览器已经自动超时两次了。现在第三次加载中，我准备去烧柱香。', replyTo: 5, isOp: true },
+                    { user: '专业必修战神', tag: '七楼', content: '建议楼主直接放弃通识，来我们专业必修捡漏。<b>操作系统</b> 还有3个位置，老师是Dr. Wong，给分还行，就是作业多到爆炸。不过总比抢不到课强，你说是吧？' },
+                    { user: '佛系选课人', tag: '八楼', content: '我已经躺平了。选了门 <b><i>瑜伽与身心</i></b>，全靠随缘，结果它居然还有位置……可能大家都去抢热门课了吧。话说回来，瑜伽课的老师Ms. Lin人很好，就是每次上课都要冥想十分钟，我每次都睡着。' },
+                    { user: '课表清洁工', tag: '九楼', content: '八楼笑死，冥想课实锤。不过认真说，我刚刚用手机+电脑+平板三端同时刷，终于挤进去了，成功选上了 <b>数据库系统</b>。经验就是：<span style="color:#b22234;">别用校园网，用流量！！别用Chrome，用Edge！！别用电脑，用手机！！</span>（虽然我也不知道为什么，但它就是成了）', replyTo: 8 },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '九楼你是我亲哥！！！我换了手机流量+Edge，真的进去了！！！而且选上了 <b>电影与心理学</b> 和 <b><i>瑜伽</i></b>，虽然Python没了，但好歹有课上了呜呜呜。不过我现在有个新问题——课表上显示两门课时间挨得太近，一个在文科楼，一个在体育馆，我怀疑我要练就一身飞毛腿才能赶上。', replyTo: 9, isOp: true },
+                    { user: '老油条学姐', tag: '十一楼', content: '楼主啊，你这个课表搭配，我愿称之为<span style="color:#b22234;font-weight:bold;">"死亡对角线"</span>。建议你退掉一门，不然期中考试周你会想穿越回来掐死自己。不过话说回来，能选上就不错了，我们当年还经历过系统直接回档，选好的课一夜之间全没了……那才叫真正的绝望。', replyTo: 10 },
+                    { user: '课表清洁工', tag: '十二楼', content: '回档？？？那也太离谱了吧……我现在开始担心我的选课记录会不会消失了。', replyTo: 11 },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '别说了别说了，我已经开始焦虑了。我现在每隔五分钟截一次图，记录我的选课状态，以防万一。', replyTo: 12, isOp: true },
+                    { user: '选课难民', tag: '十四楼', content: '截图+1，我已经存了十几张了。感觉自己在做什么重大实验记录。', replyTo: 13 },
+                    { user: '佛系选课人', tag: '十五楼', content: '你们太卷了……我选完课就关了页面，现在连自己选了啥都忘了。不过反正都是随缘，能毕业就行。' },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '十五楼的心态我羡慕了。我现在还在纠结要不要退一门换别的，但系统又卡了……算了，先这样吧，我去吃个早饭冷静一下。祝各位都能选上心仪的课🙏', replyTo: 15, isOp: true },
+                    { user: '熬夜秃头选手', tag: '十七楼', content: '祝楼主好运，也祝我自己好运。我还在刷 <b>机器学习</b> 的捡漏，希望能有人退课……' },
+                    { user: '课表清洁工', tag: '十八楼', content: '捡漏玄学：<span style="color:#b22234;font-weight:bold;">凌晨三点和中午十二点</span>最容易刷出空位。别问我怎么知道的，问就是过来人。' },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '十八楼好人一生平安！！！我设个闹钟，凌晨三点起来捡漏。希望到时候系统别崩……', replyTo: 18, isOp: true },
+                    { user: '管理员', tag: '二十楼', content: '<span style="color:#b22234;font-weight:bold;">【温馨提示】</span>选课系统将于今日22:00至明日06:00进行维护，期间暂停访问。请同学们合理安排选课时间。' },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '……好的，我刚设完闹钟。现在取消了。晚安各位，明天再战。', replyTo: 20, isOp: true },
+                    { user: '佛系选课人', tag: '二十二楼', content: '哈哈哈哈哈哈楼主实惨。不过没事，课嘛，总会有的。实在不行，下学期再选。' },
+                    { user: '老油条学姐', tag: '二十三楼', content: '正解。我当年也是抢不到课，后来发现下学期开课更多，还不用抢。所以别太焦虑啦~' },
+                    { user: '小鲸不是鱼', tag: '楼主', content: '谢谢学姐安慰😭那我就先躺平了，等系统维护完再说。大家也早点休息，别熬夜刷了，反正刷也刷不进去……', replyTo: 23, isOp: true }
+                ];
+
+                demoFloors.forEach(f => {
+                    const number = getNextNumber();
+                    const floor = {
+                        id: nextId++,
+                        number: number,
+                        user: f.user,
+                        tag: f.tag || '',
+                        contentHtml: f.content,
+                        contentPlain: f.content.replace(/<[^>]*>/g, '').trim() || '（内容为空）',
+                        replyTo: f.replyTo || null,
+                        isOp: f.isOp || false
+                    };
+                    floors.push(floor);
+                    if (f.user.trim()) userSet.add(f.user.trim());
+                });
+                getUserList();
+                renderAll();
+                // 保存初始数据
+                saveData();
+            }
+
+            console.log('🧩 楼层生成器自动保存版已加载。所有修改自动保存，刷新页面不丢失！');
+        }
+
+        // 启动
+        init();
+    })();
+</script>
+</body>
+</html>
